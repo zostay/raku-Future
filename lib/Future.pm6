@@ -84,8 +84,15 @@ role Future[::Type = Any] {
     method !make-promise-handler-into-future-handler(&handler) {
         anon sub future-handler(|c) {
             try {
-                CATCH { default { return (Rejected, $_) } }
-                return (Fulfilled, handler(|c));
+                CATCH { default { return \(Rejected, $_) } }
+
+                my $new-result = handler(|c);
+                try {
+                    my $c = \(|$new-result);
+                    $new-result = await(|$c);
+                }
+
+                return \(Fulfilled, $new-result);
             }
         }
     }
