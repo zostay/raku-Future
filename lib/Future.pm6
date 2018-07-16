@@ -319,4 +319,8 @@ expectation. The latter should be done at the end of a callback chain because
 it's only the final fulfillment that must be constrained. (Though, you may, of
 course, constrain the intermediate steps if you like.)
 
+Finally, a L<Future> will "unravel" anything that is C<await>-able. All concurrent objects built-in to Perl 6 provide an await function that can be used to wait for a value from another thread to become available to the current thread. This means that any time a Future encounters an object that can be awaited, it will await that return before continuing.
+
+This means that if you intend to return a L<Promise>, L<Supply>, L<Channel>, or even another L<Future> to a L<Future>, you cannot do so directly (i.e., you must wrap it in a L<Hash> or other object).
+
 =end pod
