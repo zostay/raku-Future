@@ -21,7 +21,7 @@ subtest 'Promise to Future' => {
     my $p = Promise.new;
     isa-ok $p, Promise;
 
-    my $f = Future.await($p);
+    my $f = Future.awaitable($p);
     does-ok $f, Future;
 }
 

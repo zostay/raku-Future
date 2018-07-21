@@ -57,7 +57,7 @@ role Future[::Type = Any] {
         $f
     }
 
-    method await(Future: $p --> Future:D) {
+    method awaitable(Future: $p --> Future:D) {
         my &promise-handler = self!make-promise-handler-into-future-handler({ await $p });
 
         my $f = self.bless;
@@ -277,8 +277,9 @@ to eventually provide that value:
 =item The C<.start()> method takes a block which will run on a new thread. The
 return value from the block becomes the future value.
 
-=item The C<.await()> method takes any object that can be used with C<await>.
-The Future will get the value of that object whenever C<await> returns it.
+=item The C<.awaitable()> method takes any object that can be used with
+C<await>.  The Future will get the value of that object whenever C<await>
+returns it.
 
 =item The C<.immediate()> takes a value which immediately fulfills the Future.
 
@@ -319,7 +320,11 @@ expectation. The latter should be done at the end of a callback chain because
 it's only the final fulfillment that must be constrained. (Though, you may, of
 course, constrain the intermediate steps if you like.)
 
-Finally, a L<Future> will "unravel" anything that is C<await>-able. All concurrent objects built-in to Perl 6 provide an await function that can be used to wait for a value from another thread to become available to the current thread. This means that any time a Future encounters an object that can be awaited, it will await that return before continuing.
+Finally, a L<Future> will "unravel" anything that is C<await>-able. All
+concurrent objects built-in to Perl 6 provide an await function that can be
+used to wait for a value from another thread to become available to the
+current thread. This means that any time a Future encounters an object that
+can be awaited, it will await that return before continuing.
 
 This means that if you intend to return a L<Promise>, L<Supply>, L<Channel>, or even another L<Future> to a L<Future>, you cannot do so directly (i.e., you must wrap it in a L<Hash> or other non-slippy object).
 
