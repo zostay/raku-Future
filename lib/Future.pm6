@@ -229,7 +229,7 @@ multi await(Future $future --> Mu) is export { $future.result }
 
 =begin pod
 =head1 NAME
-Future - A futuristic extension to Perl 6 Promises
+Future - A futuristic extension to Promises and other awaitables
 =head1 SYNOPSIS
 
     use Future;
@@ -313,10 +313,12 @@ rejection.
 
 Each of these return a new L<Future> that will be fulfilled after the original
 Future is fulfilled and the callback completes.  The actual semantics of how
-each these calls work is subtly different, but are based upon the differences in
-how Perl 6 handles multi-subs, CATCH-blocks, and LAST-blocks.
+each these calls work is subtly different, but are loosely based upon the
+differences in how Perl 6 handles multi-subs, CATCH-blocks, and LAST-blocks.
 
-A L<Future> may also be type-aware. I often want to return a L<Promise> from a method, but then I have to explicitly document what that Promise is actually supposed to return. This is no longer a problem with Future:
+A L<Future> is also type-aware. I often want to return a L<Promise> from a
+method, but then I have to explicitly document what that Promise is actually
+supposed to return. This is no longer a problem with Future:
 
     # This is bleh
     method fib($n --> Promise) { ... }
@@ -327,15 +329,14 @@ A L<Future> may also be type-aware. I often want to return a L<Promise> from a m
 You can create a L<Future> with an explicitly parameterized type or you can use
 the C<.constrain()> method to take an existing Future and apply that type
 expectation. The latter should be done at the end of a callback chain because
-it's only the final fulfillment that must be constrained. (Though, you may, of
-course, constrain the intermediate steps if you like.)
+it's only the final fulfillment that ought to be constrained to the final result
+type. (Though, you may, of course, constrain the intermediate steps if you
+like.)
 
-Finally, a L<Future> will "unravel" anything that is C<await>-able. All
-concurrent objects built-in to Perl 6 provide an await function that can be
-used to wait for a value from another thread to become available to the
-current thread. This means that any time a Future encounters an object that
-can be awaited, it will await that return before continuing.
-
-This means that if you intend to return a L<Promise>, L<Supply>, L<Channel>, or even another L<Future> to a L<Future>, you cannot do so directly (i.e., you must wrap it in a L<Hash> or other non-slippy object).
+Finally, a L<Future> will recursively await anything that is C<await>-able. All
+concurrent objects built-in to Perl 6 provide an await function that can be used
+to wait for a value from another thread to become available whtin the current
+thread. This means that any time a Future encounters an object that can be
+awaited, it will await that return before continuing.
 
 =end pod
