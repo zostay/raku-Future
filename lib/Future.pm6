@@ -339,4 +339,41 @@ to wait for a value from another thread to become available whtin the current
 thread. This means that any time a Future encounters an object that can be
 awaited, it will await that return before continuing.
 
+=head1 METHODS
+
+=head1 DIAGNOSTICS
+
+=head2 X::Future
+
+All of the special exceptions that may be thrown by the L<Future> itself will
+implement this base exception.
+
+=head2 X::Future::NoMatch
+
+This is roughly equivalent to L<X::Multi::NoMatch> and occurs when none of the
+callbacks listed in a callback chain are unable to handle the incoming value.
+
+=head2 X::Future::Ambiguous
+
+This is rougly equivalent to L<X::Multi::Ambiguous> and occurs when more than
+one callback listed could resolve the callback value. If this could be possible,
+it is recommended that you add the C<is default> trait to one of the callbacks.
+
+=head2 X::Future::Mismatch
+
+This is thrown when the L<Future> is fulfilled with a value that does not match
+the parameterized type constraint of the Future.
+
+=head3 method expected
+
+    method expected(X::Future::Mismatch:D: --> Mu)
+
+Returns the type constraint of the L<Future>.
+
+=head3 method got
+
+    method value(X::Future::Mismatch:D: --> Mu)
+
+Returns the value that failed the type constraint.
+
 =end pod
