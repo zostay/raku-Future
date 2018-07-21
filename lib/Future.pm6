@@ -273,10 +273,8 @@ Future - A futuristic extension to Promises and other awaitables
 =head1 DESCRIPTION
 
 Promises are wonderful, but having become accustomed to some of the features of
-Promises::Promise in Perl 5, I sometimes find the API of Promise to be lacking.
-For many typical cases, these warts don't show up. For the edge cases, I wanted
-to make something that made Promises a little nicer to work with. So to the
-L<Future>.
+promises in other languages, I found a few things lacking. I wanted to make
+something that made Promises a little nicer to work with. So to the L<Future>.
 
 A L<Future> is just a placeholder for a future value. It does not directly
 provide any means of resolving that value. Instead, it depends on something else
@@ -339,7 +337,94 @@ to wait for a value from another thread to become available whtin the current
 thread. This means that any time a Future encounters an object that can be
 awaited, it will await that return before continuing.
 
+=head1 GOALS
+
+Why has this module been created? This module's purpose is to create an
+interface based on L<Promise> that has a few features which can make it nicer to
+work with as a developer. These goals are based upon my own experience working
+with promise-type tools in other languages, such as Perl 5, JavaScript, and
+Scala. It does not try to implement a particular interface from that experience,
+but tries to remain true to idiomatic Perl 6 in style and implementation
+instead.
+
+Here are the primary goals I had in mind, contrasted with the behavior of
+L<Promise>:
+
+=item * A L<Future> should have the ability to use chains of callback to handle
+exceptional conditions. A L<Promise> does not call any callbacks if the Promise
+is broken. To handle an exception, you must do something like nested C<start>
+blocks with the outer start block C<await>ing an inner block and catching the
+exception that may be rethrown.
+
+=item * A L<Future> should be parameterized by type. A L<Promise> may be kept
+with any kind of value. One advantage of a type-system is that it is
+self-documenting. By examining the types accepted as parameters or returned, its
+often possible to infer what a subroutine does. A Promise provides some useful
+information about the immediate type, but no indication as to what it could
+become in the future.
+
+=head1 FUTURE STATES
+
+A L<Future> has three possible states:
+
+=item * B<Pending.> A pending Future is one that may either become fulfilled or
+become rejected. It might also remain pending indefinitely. This corresponds to
+the Planned state of L<Promise>.
+
+=item * B<Fulfilled.> A fulfilled Future is complete and has a value. This is a
+stop state and the Future is not able to transition out of this status. This
+corresponds to the Kept state of L<Promise>.
+
+=item * B<Rejected.> A rejected Future is failed with an exception. This is a
+stop state and the Future is not able to transition out of this status. This
+corresponds to the Broken state of L<Promise>.
+
+While a particular L<Future> object is unable to transition out of a fulfilled
+or rejected stop state, you can transform the Future using a callback.
+Callbacks will construct a new future, which can have a different state than the
+one the callback starts with.
+
 =head1 METHODS
+
+=head2 method awaitable
+
+    method awaitable(Future:U: $p --> Future:D)
+
+This constructs and returns a new L<Future> based around the given L<Promise> or
+other awaitable object. The Future will be fulfilled or rejected whenever the
+underlying Promise or other C<await>-able is fulfilled or rejected.
+
+The following is mostly a reiteration of the documentation for C<await>, but
+here's a quick rundown of how each behaves when wrapped in a L<Future>.
+
+=head3 Promise
+
+The L<Future> will remain pending as long as the L<Promise> is Planned. The
+Future will become fulfilled when the Promise is Kept or rejected when the
+Promise is broken.
+
+=head3 Channel
+
+The L<Future> will remaining pending until the next value is sent to the
+underlying L<Channel>. At that time, the Future becomes fulfilled with that
+value. If the Channel is closed before a value is sent, the Future is
+rejected.
+
+=head3 Supply
+
+The L<Future> will remaining pending until the L<Supply> emits all values and is
+done. The Future will become fulfilled with the final value emitted at that
+point. If, isntead, the Supply quits, the L<Future> becomes rejected.
+
+=head2 method state
+
+    method start(Future:U: &block --> Future:D)
+
+This is basically a short-cut for:
+
+    Future.awaitable(start { ... });
+
+The given C<&block> will be executed on the next available thread. Then, this method constructs and returns a L<Future> whose outcome will be based upon the outcome of that block.
 
 =head1 DIAGNOSTICS
 
