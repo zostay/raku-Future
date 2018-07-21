@@ -68,13 +68,13 @@ role Future[::Type = Any] {
     method immediate(Future: $v --> Future:D) {
         my $f = self.bless;
         my $p = Promise.new;
-        $p.keep($v);
+        $p.keep(\(Fulfilled, $v));
         $f!set-metal($p);
         $f;
     }
 
     method is-pending(Future:D: --> Bool) { $!metal.status ~~ Planned }
-    method is-rejected(Future:D: --> Bool) { !$.is-fulfilled }
+    method is-rejected(Future:D: --> Bool) { !$.is-pending && !$.is-fulfilled }
     method is-fulfilled(Future:D: --> Bool) {
         $!metal.status ~~ Kept
             && $!metal.result[0] ~~ Fulfilled
