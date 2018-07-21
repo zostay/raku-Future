@@ -73,6 +73,14 @@ role Future[::Type = Any] {
         $f;
     }
 
+    method exceptional(Future: Exception $x --> Future:D) {
+        my $f = self.bless;
+        my $p = Promise.new;
+        $p.keep(\(Rejected, $x));
+        $f!set-metal($p);
+        $f;
+    }
+
     method is-pending(Future:D: --> Bool) { $!metal.status ~~ Planned }
     method is-rejected(Future:D: --> Bool) { !$.is-pending && !$.is-fulfilled }
     method is-fulfilled(Future:D: --> Bool) {
@@ -282,6 +290,8 @@ C<await>.  The Future will get the value of that object whenever C<await>
 returns it.
 
 =item The C<.immediate()> takes a value which immediately fulfills the Future.
+
+=item The C<.exceptional()> takes an L<Exception>, which creates a rejected Future.
 
 This means a Future can get its value from basically anything, including a
 L<Promise>, L<Supply>, or L<Channel>.

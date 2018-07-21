@@ -48,4 +48,17 @@ subtest 'Value to Future' => {
     nok $f.is-rejected;
 }
 
+subtest 'Exception to Future' => {
+    my $f = Future.exceptional(X::AdHoc.new(:message<bad stuff>));
+
+    does-ok $f, Future;
+
+    dies-ok { await $f };
+    dies-ok { $f.result };
+
+    nok $f.is-pending;
+    nok $f.is-fulfilled;
+    ok $f.is-rejected;
+}
+
 done-testing;
