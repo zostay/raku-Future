@@ -168,8 +168,12 @@ role Future[::Type = Any] {
                         }
 
                         my $c = \($result[1]);
-                        my &callback = self!best-callable(@callbacks, $result[1], :handler<catch>);
-                        return .(|$c) with self!make-promise-handler-into-future-handler(&callback);
+                        for @callbacks -> &callback {
+                            next unless $c ~~ &callback.signature;
+                            return .(|$c) with self!make-promise-handler-into-future-handler(&callback);
+                        }
+
+                        return \(Rejected, $result[1]);
                     }
                 }
                 else {
@@ -179,6 +183,7 @@ role Future[::Type = Any] {
         );
     }
 
+    # EXPERIMENTAL!!! This will probably go away.
     method last(Future:D: &callback --> Future:D) {
         self!new-future(
             $!metal.then(sub ($p) {
@@ -191,7 +196,7 @@ role Future[::Type = Any] {
                         }
                     }
 
-                    callback(|$c);
+                    callback();
                 }
 
                 return $result;
@@ -266,7 +271,7 @@ Future - A futuristic extension to Promises and other awaitables
     ).then(
         -> Str $val { $val.Numeric },
         -> IO::Handle $fh { $fh.slurp.Numeric },
-    ).finally({ .say }).constrain(Int);
+    ).constrain(Int);
 
     say await $i;
 
@@ -305,9 +310,6 @@ The action of the callbacks is based on the method used to register them:
 =item C<.then()> These callbacks are executed on fulfillment.
 
 =item C<.catch()> These callbacks are executed on rejection.
-
-=item C<.last()> These callbacks are executed on both fulfillment and
-rejection.
 
 Each of these return a new L<Future> that will be fulfilled after the original
 Future is fulfilled and the callback completes.  The actual semantics of how
@@ -405,28 +407,188 @@ Promise is broken.
 
 =head3 Channel
 
-The L<Future> will remaining pending until the next value is sent to the
+The L<Future> remains pending until the next value is sent to the
 underlying L<Channel>. At that time, the Future becomes fulfilled with that
 value. If the Channel is closed before a value is sent, the Future is
 rejected.
 
 =head3 Supply
 
-The L<Future> will remaining pending until the L<Supply> emits all values and is
+The L<Future> is held pending until the L<Supply> emits all values and is
 done. The Future will become fulfilled with the final value emitted at that
 point. If, isntead, the Supply quits, the L<Future> becomes rejected.
 
-=head2 method state
+=head2 method start
 
     method start(Future:U: &block --> Future:D)
 
-This is basically a short-cut for:
+You can think of this as a shortcut for:
 
     Future.awaitable(start { ... });
 
-The given C<&block> will be executed on the next available thread. Then, this method constructs and returns a L<Future> whose outcome will be based upon the outcome of that block.
+The given C<&block> will be scheduled to run on the next available thread. Then,
+this method constructs and returns a L<Future> whose outcome will be based upon
+the outcome of that block. If the block exits normally, the result of the block
+will become the fulfilled Future value. If, instead, the block throws an
+exception, the Future is rejected with that exception.
+
+=head2 method immediate
+
+    method immediate(Future:U: $value --> Future:D)
+
+This method constructs and returns a Future that is already fulfilled with the
+given value.
+
+=head2 method exceptional
+
+    method exceptional(Future:U: Exception $x --> Future:D)
+
+This method constructs and returns a Future that is already rejected with the
+given L<Exception>.
+
+=head2 method is-pending
+
+    method is-pending(Future:D: --> Bool)
+
+Returns True while the L<Future> is pending and not yet either fulfilled or
+rejected.  Therefore, the following invariant will always be true:
+
+    .is-pending ?? !.is-fulfilled && !.is-rejected !! .is-fulfilled || .is-rejected
+
+Once this becomes False, it will always be False.
+
+=head2 method is-fulfilled
+
+    method is-fulfilled(Future:D: --> Bool)
+
+Returns True if the L<Future> has been fulfilled with a value. Once this becomes
+True it will always be True.
+
+=head2 method is-rejected
+
+    method is-rejected(Future:D: --> Bool)
+
+Returns True if the L<Future> has been rejected with an L<Exception>. Once this
+becomes True it will always be True.
+
+=head2 method then
+
+    method then(Future:D: *@callbacks --> Future:D)
+
+This method constructs and returns a new L<Future>. When the original invocant
+is fulfilled, a callback will be selected based on the outcome of the original
+Future's fulfillment. For example:
+
+    my $v = await Future.start({ 41 }).then(
+        -> Str $s { $s.Int },
+        -> Int $i { $i + 1 },
+    );
+    say $v; #> 42
+
+The callback with a signature matching the original value will be chosen.
+Exactly one callback must apply to the value or an exception will be thrown. If
+multiple callbacks may apply, you should use the C<is default> trait to
+distinguish which is preferred. The goal here is to act as much like a multi-sub
+as possible. (Though, the exceptions thrown are L<X::Future::NoMatch> and
+L<X::Future::Ambiguous> rather than the Perl counterparts for multis.)
+
+The outcome of the callback is then used to determine the outcome of the newly
+constructed L<Future>. If the block exits normally, the resulting value will be
+the fulfilled value of the Future. If the block exits with an exception, that
+exception will be used for the rejection of that Future.
+
+If the Future is rejected, none of these callbacks are called and the L<Future>
+becomes rejected with the same exception as the original invocant:
+
+    await Future.start({ die 42 }).then(
+        -> Str $s { $s.Int }, # ignored
+        -> Int $i { $i + 1 }, # ignored
+    );
+
+    CATCH { .payload.say }
+    #> 42
+
+When going from one L<Future> to the next in the C<.then()> callback chain, the
+results of each Future earlier in the chain is treated as a L<Capture>. This
+means that by using Capture objects directly (or, if you prefer, lists or hashes
+to create Capture-like objects indirectly), you can very nicely chain complex
+results from one L<Future> to the next:
+
+    Future.start({ \(42, :!beeblebrox) }).then(
+        -> $answer, :$beeblebrox = True { ... }
+    });
+
+=head2 method catch
+
+    method catch(Future:D: *@callbacks --> Future:D)
+
+This method constructs and returns a new L<Future>. When the original invocant
+is rejected, a callback will be selected based on teh outcome of the original
+Future's rejection. For example:
+
+    my $v = await Future({ die 42 }).then(
+        -> X::AdHoc $x { .payload }),
+        -> X::IO $x { $x.rethrow }),
+    );
+    say $v; #> 42
+
+The callback with a signature matching the original Future's rejected Exception
+value will be chosen. The first matching callback is accepted and it is
+acceptable for no callback to match (in which case, the returned Future will be
+rejected with the same exception as the original). The goal is to act as much as
+possible like a CATCH-block.
+
+The outcome of the callback is used to determine the outcome of the newly
+constructure L<Future>. If the block exits normally, the resulting value will be
+the fulfilled value of the Future. If the block exits with an exception, that
+exception will be used for the rejection of that Future.
+
+If the original L<Future> is fulfilled, the callbacks will be ignored and the
+new Future in the chain will be fulfilled with the same value as the previous.
+
+=head2 method constrain
+
+    method constrain(Future:D: Mu \type --> Future:D)
+
+Given a type name, this constructs a new Future constrained to that type. It is
+most useful in situations where you want to add a type constraint on the
+end-product but the intermediate steps in the callback chain can be something
+different:
+
+    # This example is trivial, but makes the point
+    sub calculate(Int $i --> Future[Str]) {
+        Future.start({
+            (1..*).grep(*.is-prime)[$i]
+        }).then({ .Str }).constrain(Str);
+    }
+
+    my Future[Str] $p = calculate(10_000_000_000);
+    say await $p;
+
+It constrains the type. It is up to the L<Future> to make sure the correct type
+is actually fulfilled. If the fulfilled type does not match the constraint, the
+Future is rejected with an L<X::Future::Mismatch> exception.
+
+=head2 method result
+
+    method result(Future:D: --> Mu)
+
+This will return the fulfilled result of the L<Future> or throw the L<Exception>
+the future was rejected with. This will block until a value becomes available.
+
+=head2 sub await
+
+    sub await(Future:D $future --> Mu)
+
+This will return the fulfilled result of the L<Future> or throw the L<Exception>
+the future was rejected with. This will block until a value becomes available.
 
 =head1 DIAGNOSTICS
+
+Here are the exceptions that are specifically added by this class. Please note
+that there may be other exceptions thrown by a L<Future> that are just
+standard Perl exceptions. See the documentation of exceptions for Perl and
+Rakudo, especially regarding exceptions that may be thrown by C<await>.
 
 =head2 X::Future
 
@@ -457,7 +619,7 @@ Returns the type constraint of the L<Future>.
 
 =head3 method got
 
-    method value(X::Future::Mismatch:D: --> Mu)
+    method got(X::Future::Mismatch:D: --> Mu)
 
 Returns the value that failed the type constraint.
 
