@@ -263,8 +263,9 @@ Future - A futuristic extension to Promises and other awaitables
     # Callback chains have entirely different semantics from Promise
     # - catch() - allows you to handle exceptions
     # - then() - allows for asynchronous processing
-    # - finally() - processing that is done regardless of outcome
-    my Future[Int] $i = Future.start({ open('file.txt', :r) }).catch(
+    my Future[Int] $i = Future.start(
+        { open('file.txt', :r) }
+    ).catch(
         -> X::IO { open('alt.txt', :r) }
     ).catch(
         -> X::IO { "42" }
