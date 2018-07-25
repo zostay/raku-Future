@@ -234,7 +234,9 @@ multi await(Future $future --> Mu) is export { $future.result }
 
 =begin pod
 =head1 NAME
+
 Future - A futuristic extension to Promises and other awaitables
+
 =head1 SYNOPSIS
 
     use Future;
