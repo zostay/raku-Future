@@ -278,6 +278,8 @@ Future - A futuristic extension to Promises and other awaitables
 
 =head1 DESCRIPTION
 
+B<EXPERIMENTAL.> This is an experimental API. Suggestions welcome.
+
 Promises are wonderful, but having become accustomed to some of the features of
 promises in other languages, I found a few things lacking. I wanted to make
 something that made Promises a little nicer to work with. So to the L<Future>.
