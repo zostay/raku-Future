@@ -43,7 +43,7 @@ class X::Future::Mismatch is X::Future {
 
 my enum ValueStatus <Rejected Fulfilled>;
 
-role Future[::Type = Any]:ver<0.1>:auth<cpan:hanenkamp@cpan.org> {
+role Future:ver<0.1>:auth<cpan:hanenkamp@cpan.org>[::Type = Any] {
     has Promise $!metal;
 
     method !get-metal() { $!metal }
