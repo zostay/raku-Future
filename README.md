@@ -1,5 +1,7 @@
-NAME Future - A futuristic extension to Promises and other awaitables
-=====================================================================
+NAME
+====
+
+Future - A futuristic extension to Promises and other awaitables
 
 SYNOPSIS
 ========
