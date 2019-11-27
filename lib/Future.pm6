@@ -319,7 +319,7 @@ The action of the callbacks is based on the method used to register them:
 Each of these return a new L<Future> that will be fulfilled after the original
 Future is fulfilled and the callback completes.  The actual semantics of how
 each these calls work is subtly different, but are loosely based upon the
-differences in how Perl 6 handles multi-subs, CATCH-blocks, and LAST-blocks.
+differences in how Raku handles multi-subs, CATCH-blocks, and LAST-blocks.
 
 A L<Future> is also type-aware. I often want to return a L<Promise> from a
 method, but then I have to explicitly document what that Promise is actually
@@ -339,7 +339,7 @@ type. (Though, you may, of course, constrain the intermediate steps if you
 like.)
 
 Finally, a L<Future> will recursively await anything that is C<await>-able. All
-concurrent objects built-in to Perl 6 provide an await function that can be used
+concurrent objects built-in to Raku provide an await function that can be used
 to wait for a value from another thread to become available whtin the current
 thread. This means that any time a Future encounters an object that can be
 awaited, it will await that return before continuing.
@@ -351,7 +351,7 @@ interface based on L<Promise> that has a few features which can make it nicer to
 work with as a developer. These goals are based upon my own experience working
 with promise-type tools in other languages, such as Perl 5, JavaScript, and
 Scala. It does not try to implement a particular interface from that experience,
-but tries to remain true to idiomatic Perl 6 in style and implementation
+but tries to remain true to idiomatic Raku in style and implementation
 instead.
 
 Here are the primary goals I had in mind, contrasted with the behavior of
